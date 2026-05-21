@@ -9,35 +9,19 @@ fn main() {
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
-
-        let builtin_commands = vec!["echo", "type", "exit"];
         
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
         
         input = input.trim().to_string();
-        let path = env::var("PATH").unwrap();
 
         let args = parse_args(&input);
-                
-        if args[0] == "exit" {
+        let command = &args[0];
+        
+        if command == "exit" {
             break;
-        } else if args[0] == "echo" {
-            println!("{}", args[1..].join(" "));
-        } else if args[0] == "type" {
-            if builtin_commands.contains(&args[1].as_str()) {
-                println!("{} is a shell builtin", &args[1]);
-            } else if let Some(path) = locate_executables(&args[1], &path){
-                println!("{} is {}", &args[1], path.display())
-            } else {
-                println!("{}: not found", &args[1]);
-            }
-        } else if locate_executables(&args[0].as_str(), &path).is_some() {
-            std::process::Command::new(&args[0].as_str()).args(&args[1..]).spawn().unwrap().wait().unwrap();
         }
-            else {
-            println!("{}: command not found", input.trim());
-        }
+        evaluate_command(&args);
     }
 }
 
@@ -52,6 +36,31 @@ fn locate_executables(command: &str, path: &str) -> Option<path::PathBuf> {
     })
 }
 
+fn evaluate_command(args: &Vec<String>) {
+    let builtin_commands = vec!["echo", "type", "exit"];
+    let path = env::var("PATH").unwrap();
+     
+    match args[0].as_str() {
+        "echo" => println!("{}", args[1..].join(" ")),
+        "type" => {
+            if builtin_commands.contains(&args[1].as_str()) {
+                println!("{} is a shell builtin", &args[1])
+            } else if let Some(path) = locate_executables(&args[1], &path) {
+                println!("{} is {}", &args[1], path.display())
+            } else {
+                println!("{}: not found", &args[1])
+            }
+        },
+        _ => {
+            if locate_executables(args[0].as_str(), &path).is_some() {
+                std::process::Command::new(&args[0].as_str()).args(&args[1..]).spawn().unwrap().wait().unwrap();
+            } else {
+                println!("{}: command not found", args[0])
+            }
+        }
+    }
+}
+
 fn parse_args(input: &str) -> Vec<String>{
     let mut in_single_quotes = false;
     let mut in_double_quotes = false;
@@ -59,23 +68,17 @@ fn parse_args(input: &str) -> Vec<String>{
     let mut current = String::new();
     
     for char in input.chars() {
-        if char == '\'' || char == '"' {
-            if char == '\'' && !in_double_quotes {
-                in_single_quotes = !in_single_quotes;
-            } else if char == '"' && !in_single_quotes {
-                in_double_quotes = !in_double_quotes;
-            } else {
-                current.push(char);
-            }
-        } else if !char.is_whitespace() && !in_single_quotes && !in_double_quotes {
-            current.push(char);
-        } else if char.is_whitespace() && !in_single_quotes  && !in_double_quotes {
-            if !current.is_empty() {
-                args.push(current.clone());
-                current.clear();
-            }
-        } else {
-            current.push(char);
+        match char {
+            '\'' if !in_double_quotes => in_single_quotes = !in_single_quotes,
+            '"' if !in_single_quotes => in_double_quotes = !in_double_quotes,
+            char if char.is_whitespace() && !in_single_quotes && !in_double_quotes => {
+                if !current.is_empty() {
+                    args.push(current.clone());
+                    current.clear();
+                }
+            },
+            
+            char => current.push(char),
         }
     }
 
