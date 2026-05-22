@@ -64,21 +64,28 @@ fn evaluate_command(args: &Vec<String>) {
 fn parse_args(input: &str) -> Vec<String>{
     let mut in_single_quotes = false;
     let mut in_double_quotes = false;
+    let mut next_is_escaped = false;
     let mut args = Vec::new();
     let mut current = String::new();
     
     for char in input.chars() {
-        match char {
-            '\'' if !in_double_quotes => in_single_quotes = !in_single_quotes,
-            '"' if !in_single_quotes => in_double_quotes = !in_double_quotes,
-            char if char.is_whitespace() && !in_single_quotes && !in_double_quotes => {
-                if !current.is_empty() {
-                    args.push(current.clone());
-                    current.clear();
-                }
-            },
-            
-            char => current.push(char),
+        if next_is_escaped {
+            current.push(char);
+            next_is_escaped = false;
+        } else {
+            match char {
+                '\\' => next_is_escaped = true, 
+                '\'' if !in_double_quotes => in_single_quotes = !in_single_quotes,
+                '"' if !in_single_quotes => in_double_quotes = !in_double_quotes,
+                char if char.is_whitespace() && !in_single_quotes && !in_double_quotes => {
+                    if !current.is_empty() {
+                        args.push(current.clone());
+                        current.clear();
+                    }
+                },
+                
+                char => current.push(char),
+            }
         }
     }
 
