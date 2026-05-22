@@ -74,7 +74,13 @@ fn parse_args(input: &str) -> Vec<String>{
             next_is_escaped = false;
         } else {
             match char {
-                '\\' => next_is_escaped = true, 
+                '\\' => {
+                    if in_single_quotes {
+                        current.push(char);
+                    } else {
+                        next_is_escaped = true;
+                    }
+                }, 
                 '\'' if !in_double_quotes => in_single_quotes = !in_single_quotes,
                 '"' if !in_single_quotes => in_double_quotes = !in_double_quotes,
                 char if char.is_whitespace() && !in_single_quotes && !in_double_quotes => {
