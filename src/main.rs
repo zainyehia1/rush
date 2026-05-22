@@ -70,7 +70,17 @@ fn parse_args(input: &str) -> Vec<String>{
     
     for char in input.chars() {
         if next_is_escaped {
-            current.push(char);
+            if in_double_quotes {
+                match char {
+                    '"' | '$' | '\\' | '\n' => current.push(char),
+                    _ => {
+                        current.push('\\');
+                        current.push(char);
+                    }
+                }
+            } else {
+                current.push(char);
+            }
             next_is_escaped = false;
         } else {
             match char {
