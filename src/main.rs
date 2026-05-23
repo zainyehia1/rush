@@ -21,7 +21,9 @@ fn main() {
         if command == "exit" {
             break;
         }
+        
         evaluate_command(&args);
+        println!("{args:?}");
     }
 }
 
@@ -36,7 +38,7 @@ fn locate_executables(command: &str, path: &str) -> Option<path::PathBuf> {
     })
 }
 
-fn evaluate_command(args: &Vec<String>) {
+fn evaluate_command(args: &[String]) {
     let builtin_commands = vec!["echo", "type", "exit"];
     let path = env::var("PATH").unwrap();
      
@@ -84,6 +86,11 @@ fn parse_args(input: &str) -> Vec<String>{
             next_is_escaped = false;
         } else {
             match char {
+                '>' if !in_single_quotes && !in_double_quotes => {
+                    current.push(char);
+                    args.push(current.clone());
+                    current.clear();
+                }
                 '\\' => {
                     if in_single_quotes {
                         current.push(char);
