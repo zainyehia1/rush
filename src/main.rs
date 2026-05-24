@@ -5,6 +5,12 @@ use std::path;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
+struct Redirect {
+    operator: String,
+    file: String,
+    position: usize,
+}
+
 fn main() {
     loop {
         print!("$ ");
@@ -16,6 +22,7 @@ fn main() {
         input = input.trim().to_string();
 
         let args = parse_args(&input);
+        
         let command = &args[0];
         
         if command == "exit" {
@@ -23,7 +30,7 @@ fn main() {
         }
         
         evaluate_command(&args);
-        println!("{args:?}");
+        // println!("{args:?}");
     }
 }
 
@@ -41,27 +48,64 @@ fn locate_executables(command: &str, path: &str) -> Option<path::PathBuf> {
 fn evaluate_command(args: &[String]) {
     let builtin_commands = vec!["echo", "type", "exit"];
     let path = env::var("PATH").unwrap();
-     
-    match args[0].as_str() {
-        "echo" => println!("{}", args[1..].join(" ")),
-        "type" => {
-            if builtin_commands.contains(&args[1].as_str()) {
-                println!("{} is a shell builtin", &args[1])
-            } else if let Some(path) = locate_executables(&args[1], &path) {
-                println!("{} is {}", &args[1], path.display())
+
+    let redirect = redirect(args);
+    let command_args = match redirect {
+        Some(ref r) => &args[..r.position],
+        None => &args
+    };
+    
+    match command_args[0].as_str() {
+        "echo" => {
+            if let Some(r) = &redirect {
+                if r.operator == "1>" || r.operator == ">" {
+                    let mut file = std::fs::File::create(&r.file).unwrap();
+                    file.write_all((command_args[1..].join(" ") + "\n").as_bytes()).unwrap();
+                } 
             } else {
-                println!("{}: not found", &args[1])
+                println!("{}", command_args[1..].join(" "))
+            }
+        },
+        "type" => {
+            let output = if builtin_commands.contains(&command_args[1].as_str()) {
+                    format!("{} is a shell builtin", &command_args[1])
+                } else if let Some(path) = locate_executables(&command_args[1], &path) {
+                    format!("{} is {}", &command_args[1], path.display())
+                } else {
+                    format!("{}: not found", &command_args[1])
+                };
+            
+            if let Some(r) = &redirect {
+                if r.operator == "1>" || r.operator == ">" {
+                    let mut file = std::fs::File::create(&r.file).unwrap();
+                    file.write_all(output.as_bytes()).unwrap();
+                } 
+            } else {            
+                println!("{output}");   
             }
         },
         _ => {
-            if locate_executables(args[0].as_str(), &path).is_some() {
-                std::process::Command::new(&args[0].as_str()).args(&args[1..]).spawn().unwrap().wait().unwrap();
-            } else {
-                println!("{}: command not found", args[0])
-            }
+            if locate_executables(command_args[0].as_str(), &path).is_some() {
+                let mut command = std::process::Command::new(&command_args[0].as_str());
+                command.args(&command_args[1..]);
+                
+                if let Some(r) = &redirect {
+                    if r.operator == "1>" || r.operator == ">" {
+                        let mut file = std::fs::File::create(&r.file).unwrap();
+                        command.stdout(file);
+
+                        command.spawn().unwrap().wait().unwrap();
+                    }
+                } else {
+                    std::process::Command::new(&command_args[0].as_str()).args(&command_args[1..]).spawn().unwrap().wait().unwrap();
+                }
+            } else {            
+                 println!("{}: command not found", command_args[0])
+            }   
         }
     }
 }
+
 
 fn parse_args(input: &str) -> Vec<String>{
     let mut in_single_quotes = false;
@@ -117,4 +161,19 @@ fn parse_args(input: &str) -> Vec<String>{
     }
     
     args
+}
+
+fn redirect(args: &[String]) -> Option<Redirect> {
+    let operator_position = args.iter().position(|x| x == ">" || x == "1>" || x == "2>")?;
+
+    if operator_position + 1 == args.len() {
+        println!("syntax error near unexpected token `newline'");
+        return None;
+    }
+
+    Some(Redirect { 
+        operator: args[operator_position].clone(), 
+        file: args[operator_position + 1].clone(), 
+        position: operator_position,
+    })
 }
