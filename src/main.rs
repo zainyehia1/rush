@@ -66,6 +66,8 @@ fn evaluate_command(args: &[String]) {
                 } else if r.operator == "1>>" || r.operator == ">>" {
                    let mut file = fs::OpenOptions::new().append(true).create(true).open(&r.file).unwrap();
                    file.write_all((command_args[1..].join(" ") + "\n").as_bytes()).unwrap();
+                } else if r.operator == "2>>" {
+                    println!("{}", command_args[1..].join(" "))
                 }
             } else {
                 println!("{}", command_args[1..].join(" "))
@@ -87,7 +89,7 @@ fn evaluate_command(args: &[String]) {
                 } else if r.operator == "1>>" || r.operator == ">>" {
                    let mut file = fs::OpenOptions::new().append(true).create(true).open(&r.file).unwrap();
                    file.write_all(output.as_bytes()).unwrap();
-                }
+                } 
             } else {            
                 println!("{output}");   
             }
@@ -109,6 +111,10 @@ fn evaluate_command(args: &[String]) {
                         command.spawn().unwrap().wait().unwrap();
                     } else if r.operator == "1>>" || r.operator == ">>" {
                        command.stdout(fs::OpenOptions::new().append(true).create(true).open(&r.file).unwrap());
+
+                       command.spawn().unwrap().wait().unwrap();
+                    } else if r.operator == "2>>" {
+                       command.stderr(fs::OpenOptions::new().append(true).create(true).open(&r.file).unwrap());
 
                        command.spawn().unwrap().wait().unwrap();
                     }
