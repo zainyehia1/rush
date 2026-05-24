@@ -61,7 +61,10 @@ fn evaluate_command(args: &[String]) {
                 if r.operator == "1>" || r.operator == ">" {
                     let mut file = std::fs::File::create(&r.file).unwrap();
                     file.write_all((command_args[1..].join(" ") + "\n").as_bytes()).unwrap();
-                } 
+                } else if r.operator == "2>" {
+                    std::fs::File::create(&r.file).unwrap();
+                    println!("{}", command_args[1..].join(" "))
+                }
             } else {
                 println!("{}", command_args[1..].join(" "))
             }
@@ -90,10 +93,13 @@ fn evaluate_command(args: &[String]) {
                 command.args(&command_args[1..]);
                 
                 if let Some(r) = &redirect {
+                    let file = std::fs::File::create(&r.file).unwrap();
                     if r.operator == "1>" || r.operator == ">" {
-                        let mut file = std::fs::File::create(&r.file).unwrap();
                         command.stdout(file);
 
+                        command.spawn().unwrap().wait().unwrap();
+                    } else if r.operator == "2>" {
+                        command.stderr(file);
                         command.spawn().unwrap().wait().unwrap();
                     }
                 } else {
