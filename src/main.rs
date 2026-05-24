@@ -30,7 +30,6 @@ fn main() {
         }
         
         evaluate_command(&args);
-        // println!("{args:?}");
     }
 }
 
@@ -64,6 +63,9 @@ fn evaluate_command(args: &[String]) {
                 } else if r.operator == "2>" {
                     std::fs::File::create(&r.file).unwrap();
                     println!("{}", command_args[1..].join(" "))
+                } else if r.operator == "1>>" || r.operator == ">>" {
+                   let mut file = fs::OpenOptions::new().append(true).create(true).open(&r.file).unwrap();
+                   file.write_all((command_args[1..].join(" ") + "\n").as_bytes()).unwrap();
                 }
             } else {
                 println!("{}", command_args[1..].join(" "))
@@ -82,7 +84,10 @@ fn evaluate_command(args: &[String]) {
                 if r.operator == "1>" || r.operator == ">" {
                     let mut file = std::fs::File::create(&r.file).unwrap();
                     file.write_all(output.as_bytes()).unwrap();
-                } 
+                } else if r.operator == "1>>" || r.operator == ">>" {
+                   let mut file = fs::OpenOptions::new().append(true).create(true).open(&r.file).unwrap();
+                   file.write_all(output.as_bytes()).unwrap();
+                }
             } else {            
                 println!("{output}");   
             }
@@ -93,17 +98,22 @@ fn evaluate_command(args: &[String]) {
                 command.args(&command_args[1..]);
                 
                 if let Some(r) = &redirect {
-                    let file = std::fs::File::create(&r.file).unwrap();
                     if r.operator == "1>" || r.operator == ">" {
+                        let file = std::fs::File::create(&r.file).unwrap();
                         command.stdout(file);
 
                         command.spawn().unwrap().wait().unwrap();
                     } else if r.operator == "2>" {
+                        let file = std::fs::File::create(&r.file).unwrap();
                         command.stderr(file);
                         command.spawn().unwrap().wait().unwrap();
+                    } else if r.operator == "1>>" || r.operator == ">>" {
+                       command.stdout(fs::OpenOptions::new().append(true).create(true).open(&r.file).unwrap());
+
+                       command.spawn().unwrap().wait().unwrap();
                     }
                 } else {
-                    std::process::Command::new(&command_args[0].as_str()).args(&command_args[1..]).spawn().unwrap().wait().unwrap();
+                    command.spawn().unwrap().wait().unwrap();
                 }
             } else {            
                  println!("{}: command not found", command_args[0])
@@ -119,8 +129,10 @@ fn parse_args(input: &str) -> Vec<String>{
     let mut next_is_escaped = false;
     let mut args = Vec::new();
     let mut current = String::new();
+
+    let mut chars = input.chars().peekable();
     
-    for char in input.chars() {
+    while let Some(char) = chars.next() {
         if next_is_escaped {
             if in_double_quotes {
                 match char {
@@ -137,7 +149,14 @@ fn parse_args(input: &str) -> Vec<String>{
         } else {
             match char {
                 '>' if !in_single_quotes && !in_double_quotes => {
-                    current.push(char);
+                    let operator = if chars.peek() == Some(&'>'){
+                        chars.next();
+                        ">>"
+                    } else {
+                        ">"
+                    };
+                    
+                    current.push_str(operator);
                     args.push(current.clone());
                     current.clear();
                 }
@@ -170,7 +189,7 @@ fn parse_args(input: &str) -> Vec<String>{
 }
 
 fn redirect(args: &[String]) -> Option<Redirect> {
-    let operator_position = args.iter().position(|x| x == ">" || x == "1>" || x == "2>")?;
+    let operator_position = args.iter().position(|x| x == ">" || x == "1>" || x == "2>" || x == ">>" || x == "1>>" || x == "2>>")?;
 
     if operator_position + 1 == args.len() {
         println!("syntax error near unexpected token `newline'");
