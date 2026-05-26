@@ -30,7 +30,7 @@ impl Completer for LineCompleter {
         _ctx: &rustyline::Context<'_>,
     ) -> rustyline::Result<(usize, Vec<Self::Candidate>)>
     {
-        let builtin_commands = ["echo", "type", "exit"];
+        let builtin_commands = ["echo", "type", "exit", "pwd"];
         let mut commands: Vec<String> = builtin_commands.iter().map(|s| s.to_string()).collect();
         commands.extend(get_path_executables());
         
@@ -94,7 +94,7 @@ fn locate_executables(command: &str, path: &str) -> Option<path::PathBuf> {
 }
 
 fn evaluate_command(args: &[String]) {
-    let builtin_commands = ["echo", "type", "exit"];
+    let builtin_commands = ["echo", "type", "exit", "pwd"];
     let path = env::var("PATH").unwrap_or_default();
 
     let redirect = redirect(args);
@@ -143,6 +143,7 @@ fn evaluate_command(args: &[String]) {
                 println!("{output}");   
             }
         },
+        "pwd" => println!("{}", env::current_dir().unwrap().display()),
         _ => {
             if locate_executables(command_args[0].as_str(), &path).is_some() {
                 let mut command = std::process::Command::new(command_args[0].as_str());
