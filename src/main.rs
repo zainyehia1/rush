@@ -151,9 +151,6 @@ fn evaluate_command(args: &[String]) {
                 env::set_current_dir(&command_args[1]).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
             } else if command_args[1].starts_with("../") {
                 env::set_current_dir(&command_args[1]).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
-            } else if command_args[1] == "~" {
-                let home = env::var("HOME").unwrap_or_default();
-                env::set_current_dir(home).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
             } else if command_args[1].starts_with("~"){
                 let home = env::var("HOME").unwrap_or_default();
                 env::set_current_dir(&command_args[1].replacen("~", &home, 1)).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
