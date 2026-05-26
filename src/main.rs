@@ -28,9 +28,12 @@ impl Completer for LineCompleter {
         _ctx: &rustyline::Context<'_>,
     ) -> rustyline::Result<(usize, Vec<Self::Candidate>)>
     {
-        let builtin_commands = ["echo ", "type ", "exit "];
+        let builtin_commands = ["echo", "type", "exit"];
+        let mut commands: Vec<String> = builtin_commands.iter().map(|s| s.to_string()).collect();
+        commands.extend(get_path_executables());
+        
         let input = &line[..pos];
-        let candidates = builtin_commands.iter().filter(|c| c.starts_with(input)).map(|c| Pair {display: c.to_string(), replacement: c.to_string()}).collect();
+        let candidates = commands.iter().filter(|c| c.starts_with(input)).map(|c| Pair {display: c.to_string(), replacement: c.to_string() + " "}).collect();
         
         Ok((0, candidates))
     }
@@ -88,7 +91,7 @@ fn locate_executables(command: &str, path: &str) -> Option<path::PathBuf> {
 
 fn evaluate_command(args: &[String]) {
     let builtin_commands = ["echo", "type", "exit"];
-    let path = env::var("PATH").unwrap();
+    let path = env::var("PATH").unwrap_or_default();
 
     let redirect = redirect(args);
     let command_args = match redirect {
@@ -249,4 +252,19 @@ fn redirect(args: &[String]) -> Option<Redirect> {
         file: args[operator_position + 1].clone(), 
         position: operator_position,
     })
+}
+
+fn get_path_executables() -> Vec<String> {
+    let path = env::var("PATH").unwrap_or_default();
+    env::split_paths(&path).flat_map(|dir| {
+        fs::read_dir(dir).into_iter().flatten().filter_map(|entry| {
+            let entry = entry.ok()?;
+            let path = entry.path();
+            if path.is_file() {
+                path.file_name()?.to_str().map(|s| s.to_string())
+            } else {
+                None
+            }
+        })
+    }).collect()
 }
