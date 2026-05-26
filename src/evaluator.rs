@@ -76,12 +76,26 @@ pub fn evaluate_command(args: &[String], history: &[String]) {
             }
         }
         "history" => {
-            let mut i = 1;
-            for line in history {
-                println!("{i} {line}");
-                i += 1;
+            if command_args.len() == 1 {
+                for (i,line) in history.iter().enumerate() {
+                    println!("{} {line}", i + 1);
+                }
+            } else if command_args.len() == 2 {
+                let entries = command_args[1].parse::<usize>().unwrap_or(0);
+                if entries > history.len() {
+                    let mut i = 1;
+                    for line in history {
+                        println!("{} {line}", i + 1);
+                        i += 1;
+                    }
+                } else {
+                    let start = history.len() - entries;
+                    for (i,line) in history[start..].iter().enumerate() {
+                        println!("\t{} {line}", start + i + 1);
+                    }
+                }
             }
-        }
+        },
         _ => {
             if locate_executables(command_args[0].as_str(), &path).is_some() {
                 let mut command = std::process::Command::new(command_args[0].as_str());
