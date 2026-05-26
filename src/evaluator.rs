@@ -6,9 +6,9 @@ use std::os::unix::fs::PermissionsExt;
 
 use crate::parser;
 
-pub const BUILTIN_COMMANDS: [&str; 5] = ["echo", "type", "exit", "pwd", "cd"];
+pub const BUILTIN_COMMANDS: [&str; 6] = ["echo", "type", "exit", "pwd", "cd", "history"];
 
-pub fn evaluate_command(args: &[String]) {
+pub fn evaluate_command(args: &[String], history: &[String]) {
     let path = env::var("PATH").unwrap_or_default();
 
     let redirect = parser::redirect(args);
@@ -73,6 +73,13 @@ pub fn evaluate_command(args: &[String]) {
                 env::set_current_dir(command_args[1].replacen("~", &home, 1)).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
             } else {
                 env::set_current_dir("./".to_owned() + &command_args[1]).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
+            }
+        }
+        "history" => {
+            let mut i = 1;
+            for line in history {
+                println!("{i} {line}");
+                i += 1;
             }
         }
         _ => {

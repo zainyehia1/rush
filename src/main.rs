@@ -24,7 +24,8 @@ fn main() {
                 if args[0] == "exit" {
                     break;
                 }
-                evaluator::evaluate_command(&args);
+                let history: Vec<String> = rl.history().iter().map(|s| s.to_string()).collect();
+                evaluator::evaluate_command(&args, &history);
             }
             Err(_) => break
         }
