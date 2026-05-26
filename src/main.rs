@@ -5,6 +5,8 @@ use std::path;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
+use rustyline::Config;
+use rustyline::config::CompletionType;
 use rustyline::Editor;
 use rustyline::validate::Validator;
 use rustyline::{Helper, highlight::Highlighter, hint::Hinter};
@@ -55,7 +57,9 @@ impl Helper for LineCompleter {
 }
 
 fn main() {
-    let mut rl = Editor::new().unwrap();
+    let config = Config::builder().completion_type(CompletionType::List).build();
+    
+    let mut rl = Editor::with_config(config).unwrap();
     rl.set_helper(Some(LineCompleter));
     
     loop {
