@@ -30,7 +30,7 @@ impl Completer for LineCompleter {
         _ctx: &rustyline::Context<'_>,
     ) -> rustyline::Result<(usize, Vec<Self::Candidate>)>
     {
-        let builtin_commands = ["echo", "type", "exit", "pwd"];
+        let builtin_commands = ["echo", "type", "exit", "pwd", "cd"];
         let mut commands: Vec<String> = builtin_commands.iter().map(|s| s.to_string()).collect();
         commands.extend(get_path_executables());
         
@@ -94,7 +94,7 @@ fn locate_executables(command: &str, path: &str) -> Option<path::PathBuf> {
 }
 
 fn evaluate_command(args: &[String]) {
-    let builtin_commands = ["echo", "type", "exit", "pwd"];
+    let builtin_commands = ["echo", "type", "exit", "pwd", "cd"];
     let path = env::var("PATH").unwrap_or_default();
 
     let redirect = redirect(args);
@@ -144,6 +144,9 @@ fn evaluate_command(args: &[String]) {
             }
         },
         "pwd" => println!("{}", env::current_dir().unwrap().display()),
+        "cd" => if command_args[1].starts_with("/") {
+            env::set_current_dir(&command_args[1]).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
+        }
         _ => {
             if locate_executables(command_args[0].as_str(), &path).is_some() {
                 let mut command = std::process::Command::new(command_args[0].as_str());
