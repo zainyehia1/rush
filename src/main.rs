@@ -5,31 +5,73 @@ use std::path;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
+use rustyline::Editor;
+use rustyline::validate::Validator;
+use rustyline::{Helper, highlight::Highlighter, hint::Hinter};
+use rustyline::completion::{Completer, Pair};
+
 struct Redirect {
     operator: String,
     file: String,
     position: usize,
 }
 
-fn main() {
-    loop {
-        print!("$ ");
-        io::stdout().flush().unwrap();
-        
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
-        
-        input = input.trim().to_string();
+struct LineCompleter;
 
-        let args = parse_args(&input);
+impl Completer for LineCompleter {
+    type Candidate = Pair;
+    
+    fn complete(
+        &self, 
+        line: &str,
+        pos: usize,
+        _ctx: &rustyline::Context<'_>,
+    ) -> rustyline::Result<(usize, Vec<Self::Candidate>)>
+    {
+        let builtin_commands = ["echo ", "type ", "exit "];
+        let input = &line[..pos];
+        let candidates = builtin_commands.iter().filter(|c| c.starts_with(input)).map(|c| Pair {display: c.to_string(), replacement: c.to_string()}).collect();
         
-        let command = &args[0];
-        
-        if command == "exit" {
-            break;
+        Ok((0, candidates))
+    }
+}
+impl Validator for LineCompleter {
+    
+}
+
+impl Hinter for LineCompleter {
+    type Hint = String;
+}
+
+impl Highlighter for LineCompleter {
+    
+}
+
+impl Helper for LineCompleter {
+    
+}
+
+fn main() {
+    let mut rl = Editor::new().unwrap();
+    rl.set_helper(Some(LineCompleter));
+    
+    loop {
+        let read_line = rl.readline("$ ");
+        match read_line {
+            Ok(line) => {
+                rl.add_history_entry(&line).unwrap();
+                let input = line.trim().to_string();
+                let args = parse_args(&input);
+                if args.is_empty() {
+                    continue;
+                }
+                if args[0] == "exit" {
+                    break;
+                }
+                evaluate_command(&args);
+            }
+            Err(_) => break
         }
-        
-        evaluate_command(&args);
     }
 }
 
@@ -45,13 +87,13 @@ fn locate_executables(command: &str, path: &str) -> Option<path::PathBuf> {
 }
 
 fn evaluate_command(args: &[String]) {
-    let builtin_commands = vec!["echo", "type", "exit"];
+    let builtin_commands = ["echo", "type", "exit"];
     let path = env::var("PATH").unwrap();
 
     let redirect = redirect(args);
     let command_args = match redirect {
         Some(ref r) => &args[..r.position],
-        None => &args
+        None => args
     };
     
     match command_args[0].as_str() {
@@ -96,7 +138,7 @@ fn evaluate_command(args: &[String]) {
         },
         _ => {
             if locate_executables(command_args[0].as_str(), &path).is_some() {
-                let mut command = std::process::Command::new(&command_args[0].as_str());
+                let mut command = std::process::Command::new(command_args[0].as_str());
                 command.args(&command_args[1..]);
                 
                 if let Some(r) = &redirect {
