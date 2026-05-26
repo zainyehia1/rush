@@ -4,6 +4,7 @@ use rustyline::{Helper, highlight::Highlighter, hint::Hinter};
 
 use std::env;
 use std::fs;
+use crate::evaluator::BUILTIN_COMMANDS;
 
 pub struct LineCompleter;
 
@@ -17,8 +18,7 @@ impl Completer for LineCompleter {
         _ctx: &rustyline::Context<'_>,
     ) -> rustyline::Result<(usize, Vec<Self::Candidate>)>
     {
-        let builtin_commands = ["echo", "type", "exit", "pwd", "cd"];
-        let mut commands: Vec<String> = builtin_commands.iter().map(|s| s.to_string()).collect();
+        let mut commands: Vec<String> = BUILTIN_COMMANDS.iter().map(|s| s.to_string()).collect();
         commands.extend(get_path_executables());
         
         let input = &line[..pos];

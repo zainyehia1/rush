@@ -5,10 +5,10 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
 use crate::parser;
-// use crate::parser::
+
+pub const BUILTIN_COMMANDS: [&str; 5] = ["echo", "type", "exit", "pwd", "cd"];
 
 pub fn evaluate_command(args: &[String]) {
-    let builtin_commands = ["echo", "type", "exit", "pwd", "cd"];
     let path = env::var("PATH").unwrap_or_default();
 
     let redirect = parser::redirect(args);
@@ -37,7 +37,7 @@ pub fn evaluate_command(args: &[String]) {
             }
         },
         "type" => {
-            let output = if builtin_commands.contains(&command_args[1].as_str()) {
+            let output = if BUILTIN_COMMANDS.contains(&command_args[1].as_str()) {
                     format!("{} is a shell builtin", &command_args[1])
                 } else if let Some(path) = locate_executables(&command_args[1], &path) {
                     format!("{} is {}", &command_args[1], path.display())
