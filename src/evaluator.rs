@@ -114,6 +114,11 @@ pub fn evaluate_command(args: &[String], history: &mut Vec<String>) {
                     for line in buffer.lines().filter(|l| !l.is_empty()) {
                         history.push(line.to_string());
                     }
+                } else if command_args[1] == "-w" {
+                    let mut file = std::fs::File::create(&command_args[2]).unwrap();
+                    for line in history {
+                        file.write_all((line.to_string() + "\n").as_bytes()).unwrap();
+                    }
                 }
             }
         },
