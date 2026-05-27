@@ -10,12 +10,15 @@ fn main() {
     
     let mut rl = Editor::with_config(config).unwrap();
     rl.set_helper(Some(completer::LineCompleter));
+
+    let mut history: Vec<String> = Vec::new();
     
     loop {
         let read_line = rl.readline("$ ");
         match read_line {
             Ok(line) => {
                 let input = line.trim().to_string();
+                history.push(input.clone());
                 let args = parser::parse_args(&input);
                 if args.is_empty() {
                     continue;
@@ -23,8 +26,7 @@ fn main() {
                 if args[0] == "exit" {
                     break;
                 }
-                let history: Vec<String> = rl.history().iter().map(|s| s.to_string()).collect();
-                evaluator::evaluate_command(&args, &history);
+                evaluator::evaluate_command(&args, &mut history);
             }
             Err(_) => break
         }

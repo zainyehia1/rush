@@ -1,3 +1,4 @@
+use std::io::Read;
 use std::io::Write;
 use std::env;
 use std::path;
@@ -8,7 +9,7 @@ use crate::parser;
 
 pub const BUILTIN_COMMANDS: [&str; 6] = ["echo", "type", "exit", "pwd", "cd", "history"];
 
-pub fn evaluate_command(args: &[String], history: &[String]) {
+pub fn evaluate_command(args: &[String], history: &mut Vec<String>) {
     let path = env::var("PATH").unwrap_or_default();
 
     let redirect = parser::redirect(args);
@@ -88,10 +89,30 @@ pub fn evaluate_command(args: &[String], history: &[String]) {
                         println!("{} {line}", i + 1);
                         i += 1;
                     }
+                } else if command_args.len() == 3 {
+                    if command_args[1] == "-r" {
+                        let mut file = fs::File::open(&command_args[2]).unwrap();
+                        let mut buffer = String::new();
+                        file.read_to_string(&mut buffer).unwrap();
+
+                        for line in buffer.lines().filter(|l| !l.is_empty()) {
+                            history.push(line.to_string());
+                        }
+                    }
                 } else {
                     let start = history.len() - entries;
                     for (i,line) in history[start..].iter().enumerate() {
                         println!("\t{} {line}", start + i + 1);
+                    }
+                }
+            } else if command_args.len() == 3 {
+                if command_args[1] == "-r" {
+                    let mut file = fs::File::open(&command_args[2]).unwrap();
+                    let mut buffer = String::new();
+                    file.read_to_string(&mut buffer).unwrap();
+
+                    for line in buffer.lines().filter(|l| !l.is_empty()) {
+                        history.push(line.to_string());
                     }
                 }
             }
