@@ -89,16 +89,6 @@ pub fn evaluate_command(args: &[String], history: &mut Vec<String>) {
                         println!("{} {line}", i + 1);
                         i += 1;
                     }
-                } else if command_args.len() == 3 {
-                    if command_args[1] == "-r" {
-                        let mut file = fs::File::open(&command_args[2]).unwrap();
-                        let mut buffer = String::new();
-                        file.read_to_string(&mut buffer).unwrap();
-
-                        for line in buffer.lines().filter(|l| !l.is_empty()) {
-                            history.push(line.to_string());
-                        }
-                    }
                 } else {
                     let start = history.len() - entries;
                     for (i,line) in history[start..].iter().enumerate() {
@@ -117,6 +107,17 @@ pub fn evaluate_command(args: &[String], history: &mut Vec<String>) {
                 } else if command_args[1] == "-w" {
                     let mut file = std::fs::File::create(&command_args[2]).unwrap();
                     for line in history {
+                        file.write_all((line.to_string() + "\n").as_bytes()).unwrap();
+                    }
+                } else if command_args[1] == "-a" {
+                    let mut file = fs::OpenOptions::new().append(true).create(true).open(&command_args[2]).unwrap();
+
+                    let start = history[..history.len() - 1].iter().enumerate().rev()
+                        .find(|(_pos, line)| *line == &format!("history -a {}", command_args[2]))
+                        .map(|(pos, _line)| pos + 1)
+                        .unwrap_or(0);
+                    
+                    for line in &history[start..] {
                         file.write_all((line.to_string() + "\n").as_bytes()).unwrap();
                     }
                 }
