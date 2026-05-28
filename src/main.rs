@@ -2,6 +2,8 @@ use rustyline::config::CompletionType;
 use rustyline::{Config, Editor};
 
 use crate::history::{load_history, save_history};
+use crate::evaluator::evaluate_command;
+use crate::parser::parse_args;
 
 mod completer;
 mod parser;
@@ -23,7 +25,7 @@ fn main() {
             Ok(line) => {
                 let input = line.trim().to_string();
                 history.push(input.clone());
-                let args = parser::parse_args(&input);
+                let args = parse_args(&input);
                 if args.is_empty() {
                     continue;
                 }
@@ -31,7 +33,7 @@ fn main() {
                     save_history(&history);
                     break;
                 }
-                evaluator::evaluate_command(&args, &mut history);
+                evaluate_command(&args, &mut history);
             }
             Err(_) => break
         }
