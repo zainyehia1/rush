@@ -1,7 +1,7 @@
 use rustyline::config::CompletionType;
 use rustyline::{Config, Editor};
 
-use crate::history::load_history;
+use crate::history::{load_history, save_history};
 
 mod completer;
 mod parser;
@@ -28,6 +28,7 @@ fn main() {
                     continue;
                 }
                 if args[0] == "exit" {
+                    save_history(&history);
                     break;
                 }
                 evaluator::evaluate_command(&args, &mut history);
