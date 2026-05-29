@@ -1,4 +1,4 @@
-use rustyline::completion::{Completer, Pair};
+use rustyline::completion::{Completer, Pair, FilenameCompleter};
 use rustyline::validate::Validator;
 use rustyline::{Helper, highlight::Highlighter, hint::Hinter};
 
@@ -6,7 +6,15 @@ use std::env;
 use std::fs;
 use crate::evaluator::BUILTIN_COMMANDS;
 
-pub struct LineCompleter;
+pub struct LineCompleter {
+    filename_completer: FilenameCompleter,
+}
+
+impl LineCompleter {
+    pub fn new() -> Self {
+        Self { filename_completer: FilenameCompleter::new() }
+    }
+}
 
 impl Completer for LineCompleter {
     type Candidate = Pair;
@@ -15,16 +23,26 @@ impl Completer for LineCompleter {
         &self, 
         line: &str,
         pos: usize,
-        _ctx: &rustyline::Context<'_>,
+        ctx: &rustyline::Context<'_>,
     ) -> rustyline::Result<(usize, Vec<Self::Candidate>)>
     {
-        let mut commands: Vec<String> = BUILTIN_COMMANDS.iter().map(|s| s.to_string()).collect();
-        commands.extend(get_path_executables());
-        
         let input = &line[..pos];
-        let candidates = commands.iter().filter(|c| c.starts_with(input)).map(|c| Pair {display: c.to_string(), replacement: c.to_string() + " "}).collect();
-        
-        Ok((0, candidates))
+
+        if !input.contains(' ') { // if we're on the first word (command)
+            let mut commands: Vec<String> = BUILTIN_COMMANDS.iter().map(|s| s.to_string()).collect();
+            commands.extend(get_path_executables());
+            
+            let candidates = commands.iter().filter(|c| c.starts_with(input)).map(|c| Pair {display: c.to_string(), replacement: c.to_string() + " "}).collect();
+            Ok((0, candidates))
+        } else {
+            let (pos, pairs) = self.filename_completer.complete(line, pos, ctx)?;
+            let pairs = pairs.into_iter().map(|p| Pair {
+                display: p.display,
+                replacement: p.replacement + " "
+            }).collect();
+            Ok((pos, pairs))
+        }
+                
     }
 }
 

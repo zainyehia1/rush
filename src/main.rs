@@ -4,6 +4,7 @@ use rustyline::{Config, Editor};
 use crate::history::{load_history, save_history};
 use crate::evaluator::evaluate_command;
 use crate::parser::parse_args;
+use crate::completer::LineCompleter;
 
 mod completer;
 mod parser;
@@ -14,7 +15,7 @@ fn main() {
     let config = Config::builder().completion_type(CompletionType::List).history_ignore_dups(false).unwrap().auto_add_history(true).build();
     
     let mut rl = Editor::with_config(config).unwrap();
-    rl.set_helper(Some(completer::LineCompleter));
+    rl.set_helper(Some(LineCompleter::new()));
 
     let mut history: Vec<String> = Vec::new();
     load_history(&mut history);
