@@ -37,8 +37,16 @@ impl Completer for LineCompleter {
         } else {
             let (pos, pairs) = self.filename_completer.complete(line, pos, ctx)?;
             let pairs = pairs.into_iter().map(|p| Pair {
-                display: p.display,
-                replacement: p.replacement + " "
+                display: if std::path::Path::new(&p.display).is_dir() {
+                    p.display + "/"
+                } else {
+                    p.display + " "
+                },
+                replacement: if std::path::Path::new(&p.replacement).is_dir() {
+                    p.replacement
+                } else {
+                    p.replacement + " "
+                }
             }).collect();
             Ok((pos, pairs))
         }
@@ -76,4 +84,3 @@ fn get_path_executables() -> Vec<String> {
         })
     }).collect()
 }
-
