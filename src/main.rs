@@ -39,6 +39,10 @@ fn main() {
                     break;
                 }
                 evaluate_command(&args, &mut history, &mut registered_completions);
+                
+                if let Some(completion) = rl.helper_mut() {
+                    completion.registered_completions = registered_completions.clone();
+                }
             }
             Err(_) => break
         }

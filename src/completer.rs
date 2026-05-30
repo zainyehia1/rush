@@ -1,18 +1,23 @@
-use rustyline::completion::{Completer, Pair, FilenameCompleter};
+use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::validate::Validator;
 use rustyline::{Helper, highlight::Highlighter, hint::Hinter};
 
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use crate::evaluator::BUILTIN_COMMANDS;
 
 pub struct LineCompleter {
     filename_completer: FilenameCompleter,
+    pub registered_completions: HashMap<String, String>,
 }
 
 impl LineCompleter {
     pub fn new() -> Self {
-        Self { filename_completer: FilenameCompleter::new() }
+        Self {
+            filename_completer: FilenameCompleter::new(),
+            registered_completions: HashMap::new()
+        }
     }
 }
 
@@ -27,7 +32,7 @@ impl Completer for LineCompleter {
     ) -> rustyline::Result<(usize, Vec<Self::Candidate>)>
     {
         let input = &line[..pos];
-
+        
         if !input.contains(' ') { // if we're on the first word (command)
             let mut commands: Vec<String> = BUILTIN_COMMANDS.iter().map(|s| s.to_string()).collect();
             commands.extend(get_path_executables());
@@ -35,6 +40,21 @@ impl Completer for LineCompleter {
             let candidates = commands.iter().filter(|c| c.starts_with(input)).map(|c| Pair {display: c.to_string(), replacement: c.to_string() + " "}).collect();
             Ok((0, candidates))
         } else {
+            let command = input.split_whitespace().next().unwrap_or("");
+
+            if self.registered_completions.contains_key(command) {
+                if let Ok(script_output) = std::process::Command::new(self.registered_completions.get(command).unwrap()).output() {
+                    let stdout = String::from_utf8_lossy(&script_output.stdout);
+                    let candidates = stdout.lines().map(|line| Pair {
+                        display: line.to_string(),
+                        replacement: line.to_string() + " "
+                    }).collect();
+
+                   return Ok((pos, candidates));
+                }
+                
+            }
+            
             let (pos, pairs) = self.filename_completer.complete(line, pos, ctx)?;
             let pairs = pairs.into_iter().map(|p| Pair {
                 display: if std::path::Path::new(&p.display).is_dir() {
