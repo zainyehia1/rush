@@ -47,7 +47,11 @@ impl Completer for LineCompleter {
                 let current_word = argv.last().map(|s| s.as_str()).unwrap_or("");
                 let previous_word = argv.get(argv.len().saturating_sub(2)).map(|s| s.as_str()).unwrap_or("");
                 
-                if let Ok(script_output) = std::process::Command::new(self.registered_completions.get(command).unwrap()).args(vec![command, current_word, previous_word]).output() {
+                if let Ok(script_output) = std::process::Command::new(self.registered_completions.get(command).unwrap())
+                    .args(vec![command, current_word, previous_word])
+                    .env("COMP_LINE", line)
+                    .env("COMP_POINT", pos.to_string())
+                    .output() {
                     let stdout = String::from_utf8_lossy(&script_output.stdout);
                     let candidates = stdout.lines().map(|line| Pair {
                         display: line.to_string(),
