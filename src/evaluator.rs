@@ -127,11 +127,17 @@ pub fn evaluate_command(args: &[String], history: &mut Vec<String>, completions:
         "complete" => {
             if command_args.len() == 4 && command_args[1] == "-C" {
                 completions.insert(String::from(&command_args[3]), String::from(&command_args[2]));
-            } else if command_args.len() == 3 && command_args[1] == "-p" {
-                if completions.contains_key(&command_args[2]) {
-                    println!("complete -C '{}' {}", completions.get(&command_args[2]).unwrap(), command_args[2])
-                } else {
-                    println!("complete: {}: no completion specification", command_args[2])
+            } else if command_args.len() == 3 {
+                if command_args[1] == "-p" {
+                    if completions.contains_key(&command_args[2]) {
+                        println!("complete -C '{}' {}", completions.get(&command_args[2]).unwrap(), command_args[2])
+                    } else {
+                        println!("complete: {}: no completion specification", command_args[2])
+                    }
+                } else if command_args[1] == "-r" {
+                    if completions.contains_key(&command_args[2]) {
+                        completions.remove(&command_args[2]);
+                    }
                 }
             }
         },
