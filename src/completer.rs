@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use crate::evaluator::BUILTIN_COMMANDS;
+use crate::parser::parse_args;
 
 pub struct LineCompleter {
     filename_completer: FilenameCompleter,
@@ -41,16 +42,20 @@ impl Completer for LineCompleter {
             Ok((0, candidates))
         } else {
             let command = input.split_whitespace().next().unwrap_or("");
-
             if self.registered_completions.contains_key(command) {
-                if let Ok(script_output) = std::process::Command::new(self.registered_completions.get(command).unwrap()).output() {
+                let argv = parse_args(input);
+                let current_word = argv.last().map(|s| s.as_str()).unwrap_or("");
+                let previous_word = argv.get(argv.len().saturating_sub(2)).map(|s| s.as_str()).unwrap_or("");
+                
+                if let Ok(script_output) = std::process::Command::new(self.registered_completions.get(command).unwrap()).args(vec![command, current_word, previous_word]).output() {
                     let stdout = String::from_utf8_lossy(&script_output.stdout);
                     let candidates = stdout.lines().map(|line| Pair {
                         display: line.to_string(),
                         replacement: line.to_string() + " "
                     }).collect();
 
-                   return Ok((pos, candidates));
+                    let start = line.rfind(' ').unwrap_or(pos) + 1;
+                    return Ok((start, candidates));
                 }
                 
             }
