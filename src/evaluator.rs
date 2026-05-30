@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Read;
 use std::io::Write;
 use std::env;
@@ -7,9 +8,9 @@ use std::os::unix::fs::PermissionsExt;
 
 use crate::parser;
 
-pub const BUILTIN_COMMANDS: [&str; 6] = ["echo", "type", "exit", "pwd", "cd", "history"];
+pub const BUILTIN_COMMANDS: [&str; 7] = ["echo", "type", "exit", "pwd", "cd", "history", "complete"];
 
-pub fn evaluate_command(args: &[String], history: &mut Vec<String>) {
+pub fn evaluate_command(args: &[String], history: &mut Vec<String>, completions: &mut HashMap<String, String>) {
     let path = env::var("PATH").unwrap_or_default();
 
     let redirect = parser::redirect(args);
@@ -120,6 +121,17 @@ pub fn evaluate_command(args: &[String], history: &mut Vec<String>) {
                     for line in &history[start..] {
                         file.write_all((line.to_string() + "\n").as_bytes()).unwrap();
                     }
+                }
+            }
+        },
+        "complete" => {
+            if command_args.len() == 4 && command_args[1] == "-C" {
+                completions.insert(String::from(&command_args[3]), String::from(&command_args[2]));
+            } else if command_args.len() == 3 && command_args[1] == "-p" {
+                if completions.contains_key(&command_args[2]) {
+                    println!("complete -C '{}' {}", completions.get(&command_args[2]).unwrap(), command_args[2])
+                } else {
+                    println!("complete: {}: no completion specification", command_args[2])
                 }
             }
         },

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rustyline::config::CompletionType;
 use rustyline::{Config, Editor};
 
@@ -19,6 +21,8 @@ fn main() {
 
     let mut history: Vec<String> = Vec::new();
     load_history(&mut history);
+
+    let mut registered_completions: HashMap<String, String> = HashMap::new();
     
     loop {
         let read_line = rl.readline("$ ");
@@ -34,7 +38,7 @@ fn main() {
                     save_history(&history);
                     break;
                 }
-                evaluate_command(&args, &mut history);
+                evaluate_command(&args, &mut history, &mut registered_completions);
             }
             Err(_) => break
         }
