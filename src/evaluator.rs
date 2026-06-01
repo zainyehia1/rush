@@ -1,23 +1,28 @@
 use std::collections::HashMap;
-use std::io::Read;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::env;
 use std::path;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
+use std::process::Command;
 
 use crate::parser;
 
-pub const BUILTIN_COMMANDS: [&str; 7] = ["echo", "type", "exit", "pwd", "cd", "history", "complete"];
+pub const BUILTIN_COMMANDS: [&str; 8] = ["echo", "type", "exit", "pwd", "cd", "history", "complete", "jobs"];
 
 pub fn evaluate_command(args: &[String], history: &mut Vec<String>, completions: &mut HashMap<String, String>) {
     let path = env::var("PATH").unwrap_or_default();
 
     let redirect = parser::redirect(args);
-    let command_args = match redirect {
+    let mut command_args = match redirect {
         Some(ref r) => &args[..r.position],
         None => args
     };
+
+    let background = command_args.last().map(|s| s.as_str()) == Some("&");
+    if background {
+        command_args = &command_args[..command_args.len() - 1];
+    }
     
     match command_args[0].as_str() {
         "echo" => {
@@ -141,6 +146,7 @@ pub fn evaluate_command(args: &[String], history: &mut Vec<String>, completions:
                 }
             }
         },
+        "jobs" => (),
         _ => {
             if locate_executables(command_args[0].as_str(), &path).is_some() {
                 let mut command = std::process::Command::new(command_args[0].as_str());
@@ -151,22 +157,22 @@ pub fn evaluate_command(args: &[String], history: &mut Vec<String>, completions:
                         let file = std::fs::File::create(&r.file).unwrap();
                         command.stdout(file);
 
-                        command.spawn().unwrap().wait().unwrap();
+                        run_command(&mut command, background);
                     } else if r.operator == "2>" {
                         let file = std::fs::File::create(&r.file).unwrap();
                         command.stderr(file);
-                        command.spawn().unwrap().wait().unwrap();
+                        run_command(&mut command, background);
                     } else if r.operator == "1>>" || r.operator == ">>" {
                        command.stdout(fs::OpenOptions::new().append(true).create(true).open(&r.file).unwrap());
 
-                       command.spawn().unwrap().wait().unwrap();
+                       run_command(&mut command, background);
                     } else if r.operator == "2>>" {
                        command.stderr(fs::OpenOptions::new().append(true).create(true).open(&r.file).unwrap());
 
-                       command.spawn().unwrap().wait().unwrap();
+                       run_command(&mut command, background);
                     }
                 } else {
-                    command.spawn().unwrap().wait().unwrap();
+                    run_command(&mut command, background);
                 }
             } else {            
                  println!("{}: command not found", command_args[0])
@@ -184,4 +190,12 @@ fn locate_executables(command: &str, path: &str) -> Option<path::PathBuf> {
             false
         }
     })
+}
+
+fn run_command(command: &mut Command, background: bool) {
+    if background {
+        println!("[1] {}", command.spawn().unwrap().id());
+    } else {
+        command.spawn().unwrap().wait().unwrap();
+    }
 }
