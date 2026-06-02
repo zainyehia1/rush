@@ -153,9 +153,24 @@ pub fn evaluate_command(args: &[String], history: &mut Vec<String>, completions:
             }
         },
         "jobs" => {
-            for job in jobs {
-                if job.child.try_wait().unwrap().is_none() {
-                    println!("[{}]+ Running                 {}", job.id, job.command);
+            if jobs.len() == 1 {
+                println!("[{}]+  Running                 {}", jobs[0].id, jobs[0].command);
+            } else if jobs.len() == 2 {
+                println!("[{}]-  Running                 {}", jobs[0].id, jobs[0].command);
+                println!("[{}]+  Running                 {}", jobs[1].id, jobs[1].command);
+            } else {
+                let len = jobs.len();
+                for (i, job) in jobs.iter_mut().enumerate() {
+                    if job.child.try_wait().unwrap().is_none() {
+                        let marker = if i == len.saturating_sub(2) {
+                            '-'
+                        } else if i == len.saturating_sub(1) {
+                            '+'
+                        } else {
+                            ' '
+                        };
+                        println!("[{}]{}  Running                 {}", job.id, marker, job.command);
+                    }
                 }
             }
         },
