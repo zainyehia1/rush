@@ -4,13 +4,19 @@ use std::env;
 use std::path;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use std::process::Command;
+use std::process::{Child, Command};
 
 use crate::parser;
 
 pub const BUILTIN_COMMANDS: [&str; 8] = ["echo", "type", "exit", "pwd", "cd", "history", "complete", "jobs"];
 
-pub fn evaluate_command(args: &[String], history: &mut Vec<String>, completions: &mut HashMap<String, String>) {
+pub struct Job {
+    id: usize,
+    child: Child,
+    command: String,
+}
+
+pub fn evaluate_command(args: &[String], history: &mut Vec<String>, completions: &mut HashMap<String, String>, jobs: &mut Vec<Job>) {
     let path = env::var("PATH").unwrap_or_default();
 
     let redirect = parser::redirect(args);
@@ -146,33 +152,41 @@ pub fn evaluate_command(args: &[String], history: &mut Vec<String>, completions:
                 }
             }
         },
-        "jobs" => (),
+        "jobs" => {
+            for job in jobs {
+                if job.child.try_wait().unwrap().is_none() {
+                    println!("[{}]+ Running                 {}", job.id, job.command);
+                }
+            }
+        },
         _ => {
             if locate_executables(command_args[0].as_str(), &path).is_some() {
                 let mut command = std::process::Command::new(command_args[0].as_str());
                 command.args(&command_args[1..]);
+                let command_str = command_args.join(" ") + " &";
                 
                 if let Some(r) = &redirect {
                     if r.operator == "1>" || r.operator == ">" {
                         let file = std::fs::File::create(&r.file).unwrap();
                         command.stdout(file);
 
-                        run_command(&mut command, background);
+                        run_command(&mut command, background, jobs, &command_str);
                     } else if r.operator == "2>" {
                         let file = std::fs::File::create(&r.file).unwrap();
                         command.stderr(file);
-                        run_command(&mut command, background);
+                        
+                        run_command(&mut command, background, jobs, &command_str);
                     } else if r.operator == "1>>" || r.operator == ">>" {
                        command.stdout(fs::OpenOptions::new().append(true).create(true).open(&r.file).unwrap());
 
-                       run_command(&mut command, background);
+                       run_command(&mut command, background, jobs, &command_str);
                     } else if r.operator == "2>>" {
                        command.stderr(fs::OpenOptions::new().append(true).create(true).open(&r.file).unwrap());
 
-                       run_command(&mut command, background);
+                       run_command(&mut command, background, jobs, &command_str);
                     }
                 } else {
-                    run_command(&mut command, background);
+                    run_command(&mut command, background, jobs, &command_str);
                 }
             } else {            
                  println!("{}: command not found", command_args[0])
@@ -192,9 +206,12 @@ fn locate_executables(command: &str, path: &str) -> Option<path::PathBuf> {
     })
 }
 
-fn run_command(command: &mut Command, background: bool) {
+fn run_command(command: &mut Command, background: bool, jobs: &mut Vec<Job>, command_str: &String) {
     if background {
-        println!("[1] {}", command.spawn().unwrap().id());
+        let child = command.spawn().unwrap();
+        let job = Job {id: jobs.len() +  1, child: child, command: command_str.to_string()};
+        println!("[{}] {}", job.id, job.child.id());
+        jobs.push(job);
     } else {
         command.spawn().unwrap().wait().unwrap();
     }
