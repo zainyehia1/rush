@@ -4,7 +4,7 @@ use rustyline::config::CompletionType;
 use rustyline::{Config, Editor};
 
 use crate::history::{load_history, save_history};
-use crate::evaluator::{Job, evaluate_command};
+use crate::evaluator::{Job, evaluate_command, reap_finished};
 use crate::parser::parse_args;
 use crate::completer::LineCompleter;
 
@@ -26,6 +26,7 @@ fn main() {
     let mut jobs: Vec<Job> = Vec::new();
     
     loop {
+        reap_finished(&mut jobs);
         let read_line = rl.readline("$ ");
         match read_line {
             Ok(line) => {

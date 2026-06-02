@@ -228,3 +228,22 @@ fn run_command(command: &mut Command, background: bool, jobs: &mut Vec<Job>, com
         command.spawn().unwrap().wait().unwrap();
     }
 }
+
+pub fn reap_finished(jobs: &mut Vec<Job>) {
+    let len = jobs.len();
+    
+    for (i, job) in jobs.iter_mut().enumerate() {
+        let marker = if i == len.saturating_sub(1) {
+            '+'
+        } else if i == len.saturating_sub(2) {
+            '-'
+        } else {
+            ' '
+        };
+        if job.child.try_wait().unwrap().is_some(){
+            println!("[{}]{}  Done                    {}", job.id, marker, job.command.trim_end_matches(" &"));
+        }
+    }
+    
+    jobs.retain_mut(|job| job.child.try_wait().unwrap().is_none()); // remove finished commands
+}
