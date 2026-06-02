@@ -8,7 +8,7 @@ use std::process::{Child, Command};
 
 use crate::parser;
 
-pub const BUILTIN_COMMANDS: [&str; 8] = ["echo", "type", "exit", "pwd", "cd", "history", "complete", "jobs"];
+pub const BUILTIN_COMMANDS: [&str; 9] = ["echo", "type", "exit", "pwd", "cd", "history", "complete", "jobs", "declare"];
 
 pub struct Job {
     id: usize,
