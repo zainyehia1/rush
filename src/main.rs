@@ -4,7 +4,7 @@ use rustyline::config::CompletionType;
 use rustyline::{Config, Editor};
 
 use crate::history::{load_history, save_history};
-use crate::evaluator::evaluate_command;
+use crate::evaluator::{Job, evaluate_command};
 use crate::parser::parse_args;
 use crate::completer::LineCompleter;
 
@@ -23,6 +23,7 @@ fn main() {
     load_history(&mut history);
 
     let mut registered_completions: HashMap<String, String> = HashMap::new();
+    let mut jobs: Vec<Job> = Vec::new();
     
     loop {
         let read_line = rl.readline("$ ");
@@ -38,7 +39,7 @@ fn main() {
                     save_history(&history);
                     break;
                 }
-                evaluate_command(&args, &mut history, &mut registered_completions);
+                evaluate_command(&args, &mut history, &mut registered_completions, &mut jobs);
                 
                 if let Some(completion) = rl.helper_mut() {
                     completion.registered_completions = registered_completions.clone();
