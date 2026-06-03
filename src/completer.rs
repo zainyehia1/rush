@@ -5,7 +5,7 @@ use rustyline::{Helper, highlight::Highlighter, hint::Hinter};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use crate::evaluator::BUILTIN_COMMANDS;
+use crate::shell::BUILTIN_COMMANDS;
 use crate::parser::parse_args;
 
 pub struct LineCompleter {
