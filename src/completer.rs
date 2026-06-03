@@ -3,9 +3,8 @@ use rustyline::validate::Validator;
 use rustyline::{Helper, highlight::Highlighter, hint::Hinter};
 
 use std::collections::HashMap;
-use std::env;
-use std::fs;
-use crate::evaluator::BUILTIN_COMMANDS;
+use crate::utils::get_path_executables;
+use crate::shell::BUILTIN_COMMANDS;
 use crate::parser::parse_args;
 
 pub struct LineCompleter {
@@ -49,9 +48,7 @@ impl Completer for LineCompleter {
                 
                 if let Ok(script_output) = std::process::Command::new(self.registered_completions.get(command).unwrap())
                     .args(vec![command, current_word, previous_word])
-                    .env("COMP_LINE", line)
-                    .env("COMP_POINT", pos.to_string())
-                    .output() {
+                    .env("COMP_LINE", line).env("COMP_POINT", pos.to_string()).output() {
                     let stdout = String::from_utf8_lossy(&script_output.stdout);
                     let candidates = stdout.lines().map(|line| Pair {
                         display: line.to_string(),
@@ -97,19 +94,4 @@ impl Highlighter for LineCompleter {
 
 impl Helper for LineCompleter {
     
-}
-
-fn get_path_executables() -> Vec<String> {
-    let path = env::var("PATH").unwrap_or_default();
-    env::split_paths(&path).flat_map(|dir| {
-        fs::read_dir(dir).into_iter().flatten().filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.is_file() {
-                path.file_name()?.to_str().map(|s| s.to_string())
-            } else {
-                None
-            }
-        })
-    }).collect()
 }
