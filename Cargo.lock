@@ -100,7 +100,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rsh"
+name = "rush"
 version = "0.1.0"
 dependencies = [
  "rustyline",
