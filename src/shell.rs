@@ -81,33 +81,53 @@ impl Shell {
         if background {
             command_args = &command_args[..command_args.len() - 1];
         }
+
+        let mut expanded_command_args: Vec<String> = Vec::new();
+        for arg in command_args {
+            if arg.contains('$') {
+                let vars: Vec<&str> = arg.split('$').collect();
+                let literal = vars[0];
+                
+                let mut expanded_var = String::new();
+                expanded_var.push_str(literal);
+                
+                for var in &vars[1..] { // all potential variables (prefixed with '$')
+                    if self.variables.contains_key(*var) { 
+                        expanded_var.push_str(self.variables.get(*var).unwrap());
+                    }
+                }
+                expanded_command_args.push(expanded_var);
+            } else {
+                expanded_command_args.push(arg.to_owned());
+            }
+        }
         
-        match command_args[0].as_str() {
+        match expanded_command_args[0].as_str() {
             "echo" => {
                 if let Some(r) = &redirect {
                     if r.operator == "1>" || r.operator == ">" {
                         let mut file = std::fs::File::create(&r.file).unwrap();
-                        file.write_all((command_args[1..].join(" ") + "\n").as_bytes()).unwrap();
+                        file.write_all((expanded_command_args[1..].join(" ") + "\n").as_bytes()).unwrap();
                     } else if r.operator == "2>" {
                         std::fs::File::create(&r.file).unwrap();
-                        println!("{}", command_args[1..].join(" "))
+                        println!("{}", expanded_command_args[1..].join(" "))
                     } else if r.operator == "1>>" || r.operator == ">>" {
                        let mut file = fs::OpenOptions::new().append(true).create(true).open(&r.file).unwrap();
-                       file.write_all((command_args[1..].join(" ") + "\n").as_bytes()).unwrap();
+                       file.write_all((expanded_command_args[1..].join(" ") + "\n").as_bytes()).unwrap();
                     } else if r.operator == "2>>" {
-                        println!("{}", command_args[1..].join(" "))
+                        println!("{}", expanded_command_args[1..].join(" "))
                     }
                 } else {
-                    println!("{}", command_args[1..].join(" "))
+                    println!("{}", expanded_command_args[1..].join(" "))
                 }
             },
             "type" => {
-                let output = if BUILTIN_COMMANDS.contains(&command_args[1].as_str()) {
-                        format!("{} is a shell builtin", &command_args[1])
+                let output = if BUILTIN_COMMANDS.contains(&expanded_command_args[1].as_str()) {
+                        format!("{} is a shell builtin", &expanded_command_args[1])
                     } else if let Some(path) = locate_executables(&command_args[1], &path) {
-                        format!("{} is {}", &command_args[1], path.display())
+                        format!("{} is {}", &expanded_command_args[1], path.display())
                     } else {
-                        format!("{}: not found", &command_args[1])
+                        format!("{}: not found", &expanded_command_args[1])
                     };
                 
                 if let Some(r) = &redirect {
@@ -124,29 +144,29 @@ impl Shell {
             },
             "pwd" => println!("{}", env::current_dir().unwrap().display()),
             "cd" => {
-                if command_args[1].starts_with("/") {
-                    env::set_current_dir(&command_args[1]).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
-                } else if command_args[1].starts_with("./") {
-                    env::set_current_dir(&command_args[1]).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
-                } else if command_args[1].starts_with("../") {
-                    env::set_current_dir(&command_args[1]).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
-                } else if command_args[1] == "~" {
+                if expanded_command_args[1].starts_with("/") {
+                    env::set_current_dir(&expanded_command_args[1]).unwrap_or_else(|_| println!("cd: {}: No such file or directory", expanded_command_args[1]));
+                } else if expanded_command_args[1].starts_with("./") {
+                    env::set_current_dir(&expanded_command_args[1]).unwrap_or_else(|_| println!("cd: {}: No such file or directory", expanded_command_args[1]));
+                } else if expanded_command_args[1].starts_with("../") {
+                    env::set_current_dir(&expanded_command_args[1]).unwrap_or_else(|_| println!("cd: {}: No such file or directory", expanded_command_args[1]));
+                } else if expanded_command_args[1] == "~" {
                     let home = env::var("HOME").unwrap_or_default();
-                    env::set_current_dir(home).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
-                } else if command_args[1].starts_with("~"){
+                    env::set_current_dir(home).unwrap_or_else(|_| println!("cd: {}: No such file or directory", expanded_command_args[1]));
+                } else if expanded_command_args[1].starts_with("~"){
                     let home = env::var("HOME").unwrap_or_default();
-                    env::set_current_dir(command_args[1].replacen("~", &home, 1)).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
+                    env::set_current_dir(expanded_command_args[1].replacen("~", &home, 1)).unwrap_or_else(|_| println!("cd: {}: No such file or directory", expanded_command_args[1]));
                 } else {
-                    env::set_current_dir("./".to_owned() + &command_args[1]).unwrap_or_else(|_| println!("cd: {}: No such file or directory", command_args[1]));
+                    env::set_current_dir("./".to_owned() + &expanded_command_args[1]).unwrap_or_else(|_| println!("cd: {}: No such file or directory", expanded_command_args[1]));
                 }
             }
             "history" => {
-                if command_args.len() == 1 {
+                if expanded_command_args.len() == 1 {
                     for (i,line) in self.history.iter().enumerate() {
                         println!("{} {line}", i + 1);
                     }
-                } else if command_args.len() == 2 {
-                    let entries = command_args[1].parse::<usize>().unwrap_or(0);
+                } else if expanded_command_args.len() == 2 {
+                    let entries = expanded_command_args[1].parse::<usize>().unwrap_or(0);
                     if entries > self.history.len() {
                         for (i, line) in self.history.iter().enumerate() {
                             println!("{} {line}", i + 1);
@@ -157,25 +177,25 @@ impl Shell {
                             println!("\t{} {line}", start + i + 1);
                         }
                     }
-                } else if command_args.len() == 3 {
-                    if command_args[1] == "-r" {
-                        let mut file = fs::File::open(&command_args[2]).unwrap();
+                } else if expanded_command_args.len() == 3 {
+                    if expanded_command_args[1] == "-r" {
+                        let mut file = fs::File::open(&expanded_command_args[2]).unwrap();
                         let mut buffer = String::new();
                         file.read_to_string(&mut buffer).unwrap();
     
                         for line in buffer.lines().filter(|l| !l.is_empty()) {
                             self.history.push(line.to_string());
                         }
-                    } else if command_args[1] == "-w" {
-                        let mut file = std::fs::File::create(&command_args[2]).unwrap();
+                    } else if expanded_command_args[1] == "-w" {
+                        let mut file = std::fs::File::create(&expanded_command_args[2]).unwrap();
                         for line in &self.history {
                             file.write_all((line.to_string() + "\n").as_bytes()).unwrap();
                         }
-                    } else if command_args[1] == "-a" {
-                        let mut file = fs::OpenOptions::new().append(true).create(true).open(&command_args[2]).unwrap();
+                    } else if expanded_command_args[1] == "-a" {
+                        let mut file = fs::OpenOptions::new().append(true).create(true).open(&expanded_command_args[2]).unwrap();
     
                         let start = self.history[..self.history.len() - 1].iter().enumerate().rev()
-                            .find(|(_pos, line)| *line == &format!("history -a {}", command_args[2]))
+                            .find(|(_pos, line)| *line == &format!("history -a {}", expanded_command_args[2]))
                             .map(|(pos, _line)| pos + 1)
                             .unwrap_or(0);
                         
@@ -186,18 +206,18 @@ impl Shell {
                 }
             },
             "complete" => {
-                if command_args.len() == 4 && command_args[1] == "-C" {
-                    self.completions.insert(String::from(&command_args[3]), String::from(&command_args[2]));
-                } else if command_args.len() == 3 {
-                    if command_args[1] == "-p" {
-                        if self.completions.contains_key(&command_args[2]) {
-                            println!("complete -C '{}' {}", self.completions.get(&command_args[2]).unwrap(), command_args[2])
+                if expanded_command_args.len() == 4 && expanded_command_args[1] == "-C" {
+                    self.completions.insert(String::from(&expanded_command_args[3]), String::from(&expanded_command_args[2]));
+                } else if expanded_command_args.len() == 3 {
+                    if expanded_command_args[1] == "-p" {
+                        if self.completions.contains_key(&expanded_command_args[2]) {
+                            println!("complete -C '{}' {}", self.completions.get(&expanded_command_args[2]).unwrap(), expanded_command_args[2])
                         } else {
-                            println!("complete: {}: no completion specification", command_args[2])
+                            println!("complete: {}: no completion specification", expanded_command_args[2])
                         }
-                    } else if command_args[1] == "-r" {
-                        if self.completions.contains_key(&command_args[2]) {
-                            self.completions.remove(&command_args[2]);
+                    } else if expanded_command_args[1] == "-r" {
+                        if self.completions.contains_key(&expanded_command_args[2]) {
+                            self.completions.remove(&expanded_command_args[2]);
                         }
                     }
                 }
@@ -222,17 +242,29 @@ impl Shell {
                 self.jobs.retain_mut(|job| job.child.try_wait().unwrap().is_none()); // remove finished commands
             },
             "declare" => {
-                if command_args.len() == 3 {
-                    if command_args[1] == "-p" {
-                        println!("declare: {}: not found", command_args[2])
+                if expanded_command_args.len() == 2 && expanded_command_args[1].contains("=") {
+                    let (variable_name, value) = expanded_command_args[1].split_once("=").unwrap();
+
+                    if variable_name.starts_with(|c: char| c.is_digit(10)) || variable_name.chars().any(|c: char| !c.is_alphanumeric() && c != '_'){
+                        println!("declare: `{}': not a valid identifier", expanded_command_args[1]);
+                    } else {
+                        self.variables.insert(variable_name.to_string(), value.to_string());
+                    }
+                } else if expanded_command_args.len() == 3 {
+                    if expanded_command_args[1] == "-p" {
+                        if self.variables.contains_key(&expanded_command_args[2]) {
+                            println!("declare -- {}=\"{}\"", expanded_command_args[2], self.variables.get(&expanded_command_args[2]).unwrap())
+                        } else {
+                            println!("declare: {}: not found", expanded_command_args[2])
+                        }
                     }
                 }
             },
             _ => {
-                if locate_executables(command_args[0].as_str(), &path).is_some() {
-                    let mut command = std::process::Command::new(command_args[0].as_str());
-                    command.args(&command_args[1..]);
-                    let command_str = command_args.join(" ") + " &";
+                if locate_executables(expanded_command_args[0].as_str(), &path).is_some() {
+                    let mut command = std::process::Command::new(expanded_command_args[0].as_str());
+                    command.args(&expanded_command_args[1..]);
+                    let command_str = expanded_command_args.join(" ") + " &";
                     
                     if let Some(r) = &redirect {
                         if r.operator == "1>" || r.operator == ">" {
@@ -258,7 +290,7 @@ impl Shell {
                         self.run_command(background, &mut command, command_str);
                     }
                 } else {            
-                     println!("{}: command not found", command_args[0])
+                     println!("{}: command not found", expanded_command_args[0])
                 }   
             }
         }
