@@ -84,10 +84,29 @@ impl Shell {
 
         let mut expanded_command_args: Vec<String> = Vec::new();
         for arg in command_args {
-            if arg.contains('$') {
+            if arg.contains("${") && arg.contains('}'){
+                let vars: Vec<&str> = arg.split("${").collect();
+                let literal = vars[0];
+
+                let mut expanded_var = String::new();
+                expanded_var.push_str(literal);
+
+                for var in &vars[1..] {
+                    if var.contains('}') {
+                        let (var_name, rest) = var.split_once('}').unwrap();
+                        if let Some(value) = self.variables.get(var_name) {
+                            expanded_var.push_str(value);
+                        } else {
+                            expanded_var.push_str("");
+                        }
+                        expanded_var.push_str(rest);
+                    }
+                }
+                expanded_command_args.push(expanded_var);
+            } else if arg.contains('$') {
                 let vars: Vec<&str> = arg.split('$').collect();
                 let literal = vars[0];
-                
+
                 let mut expanded_var = String::new();
                 expanded_var.push_str(literal);
                 
@@ -101,7 +120,7 @@ impl Shell {
                 expanded_command_args.push(arg.to_owned());
             }
         }
-        
+        // println!("DEBUG: {:?}", expanded_command_args);
         match expanded_command_args[0].as_str() {
             "echo" => {
                 if let Some(r) = &redirect {
