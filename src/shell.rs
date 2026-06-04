@@ -102,7 +102,9 @@ impl Shell {
                         expanded_var.push_str(rest);
                     }
                 }
-                expanded_command_args.push(expanded_var);
+                if !expanded_var.is_empty() {
+                    expanded_command_args.push(expanded_var);
+                }
             } else if arg.contains('$') {
                 let vars: Vec<&str> = arg.split('$').collect();
                 let literal = vars[0];
@@ -115,12 +117,14 @@ impl Shell {
                         expanded_var.push_str(self.variables.get(*var).unwrap());
                     }
                 }
-                expanded_command_args.push(expanded_var);
+                if !expanded_var.is_empty() {
+                    expanded_command_args.push(expanded_var);
+                }
             } else {
                 expanded_command_args.push(arg.to_owned());
             }
         }
-        // println!("DEBUG: {:?}", expanded_command_args);
+        
         match expanded_command_args[0].as_str() {
             "echo" => {
                 if let Some(r) = &redirect {
