@@ -333,7 +333,7 @@ impl Shell {
     
         loop {
             self.reap_finished();
-            let read_line = rl.readline("$ ");
+            let read_line = rl.readline(&format!("{}$", env::current_dir().unwrap().display()));
             match read_line {
                 Ok(line) => {
                     let input = line.trim().to_string();

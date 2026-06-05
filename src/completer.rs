@@ -3,10 +3,10 @@ use rustyline::validate::Validator;
 use rustyline::{Helper, highlight::Highlighter, hint::Hinter};
 
 use std::collections::HashMap;
-use std::env;
-use std::fs;
+
 use crate::shell::BUILTIN_COMMANDS;
 use crate::parser::parse_args;
+use crate::utils::get_path_executables;
 
 pub struct LineCompleter {
     filename_completer: FilenameCompleter,
@@ -97,19 +97,4 @@ impl Highlighter for LineCompleter {
 
 impl Helper for LineCompleter {
     
-}
-
-fn get_path_executables() -> Vec<String> {
-    let path = env::var("PATH").unwrap_or_default();
-    env::split_paths(&path).flat_map(|dir| {
-        fs::read_dir(dir).into_iter().flatten().filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.is_file() {
-                path.file_name()?.to_str().map(|s| s.to_string())
-            } else {
-                None
-            }
-        })
-    }).collect()
 }
