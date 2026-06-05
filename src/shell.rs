@@ -96,6 +96,8 @@ impl Shell {
                         let (var_name, rest) = var.split_once('}').unwrap();
                         if let Some(value) = self.variables.get(var_name) {
                             expanded_var.push_str(value);
+                        } else if let Ok(value) = env::var(var_name) {
+                            expanded_var.push_str(&value);
                         } else {
                             expanded_var.push_str("");
                         }
@@ -115,6 +117,8 @@ impl Shell {
                 for var in &vars[1..] { // all potential variables (prefixed with '$')
                     if self.variables.contains_key(*var) { 
                         expanded_var.push_str(self.variables.get(*var).unwrap());
+                    } else if let Ok(value) = env::var(var) {
+                        expanded_var.push_str(&value);
                     }
                 }
                 if !expanded_var.is_empty() {
