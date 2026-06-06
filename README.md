@@ -41,3 +41,11 @@ The `rustyline` crate was used to manage tab completions, history navigation, an
     - `history -a <file>` appends history to a file.
     - Up/down arrow history navigation supported (via `rustyline`).
 ---
+
+## Installation
+```bash
+git clone https://github.com/zainyehia1/rush
+cd rush
+cargo install --path . 
+```
+---
