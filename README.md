@@ -14,9 +14,9 @@ The `rustyline` crate was used to manage tab completions, history navigation, an
     - `cd`: Change directory (supports relative paths, absolute paths, and `~` expansion).
     - `type`: Identify whether a given command is a shell builtin or an external executable.
     - `history`: View command history, with `-r`, `-w`, and `-a` flags for reading/writing/appending history files.
-    - `declare`: Handles local shell variable assignments and lookups via `-p`.
+    - `declare`: Set local shell variables via `=` and inspect them via `-p`.
     - `jobs`: List background tasks and their status.
-    - `complete` — register custom tab-completion scripts per command (`complete -C <script> <command>`)
+    - `complete`: Register custom tab-completion scripts per command (`complete -C <script> <command>`)
     - `exit`: Exits the REPL (saves history to `$HISTFILE` if set).
 * **Stream Redirection:** 
     - `>` / `1>` — overwrite stdout to file
@@ -39,7 +39,7 @@ The `rustyline` crate was used to manage tab completions, history navigation, an
     - `history -r <file>` reads history from a file.
     - `history -w <file>` writes history to a file. (Overwrites)
     - `history -a <file>` appends history to a file.
-    - Up/down arrow history navigation supported (via `rustyline`).
+    - Up/down arrow history navigation (via `rustyline`).
 ---
 
 ## Installation
@@ -116,3 +116,23 @@ hello world
 bye
 ~/workspace/rush$ 
 ```
+---
+
+## Limitations
+* **No pipelines**
+* **No aliases**
+* **No `export`**
+* **No exit codes**
+* **No script execution**
+* **No command substitution**
+* **No arithmetic expansion**
+* **No foreground jobs (fg)**
+* **No brace expansion**
+* **No profiles**
+* **No stopped jobs**
+* **No input redirection**
+* **Not fully POSIX-compliant**
+---
+
+## Disclaimer
+This project was based on the CodeCrafters "Build your own Shell" challenge, with some additions beyond the core stages. 
