@@ -43,6 +43,7 @@ The `rustyline` crate was used to manage tab completions, history navigation, an
 ---
 
 ## Installation
+`rush` requires version 1.85.0 of `Rust` and a Unix-like system (Linux, macOS, WSL).
 ```bash
 git clone https://github.com/zainyehia1/rush
 cd rush
