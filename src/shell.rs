@@ -6,6 +6,7 @@ use std::env;
 
 use rustyline::config::CompletionType;
 use rustyline::{Config, Editor};
+use colored::Colorize;
 
 use crate::history::{load_history, save_history};
 use crate::parser;
@@ -333,7 +334,10 @@ impl Shell {
     
         loop {
             self.reap_finished();
-            let read_line = rl.readline(&format!("{}$", env::current_dir().unwrap().display()));
+
+            let current_dir = env::current_dir().unwrap().display().to_string().replace(env::var("HOME").unwrap_or_default().as_str(), "~");
+            let prompt = format!("{}$ ", current_dir.green());
+            let read_line = rl.readline(&prompt);
             match read_line {
                 Ok(line) => {
                     let input = line.trim().to_string();
